@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-#include <SoftwareSerial.h>							// Библиотека програмной реализации обмена по UART-протоколу
+#include <SoftwareSerial.h>							
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -28,7 +28,7 @@ String sendATCommand(String cmd, bool waiting);
 String waitResponse();
 String whiteListPhones = "+380962372023, +380679832130, +380677748522";			// Withe lists of phone numbers
 void sendSMS(String phone, String message);
-void parseSMS(String msg);
+//void parseSMS(String msg);
 
 Adafruit_BME280 bme;
 ESP8266WebServer server(80);
@@ -155,22 +155,22 @@ String sendATCommand(String cmd, bool waiting) {
 	return _resp;                                 // Return result. Empty, if problem...
 }
 
-String waitResponse() {                         // Функция ожидания ответа и возврата полученного результата
-	String _resp = "";                            // Переменная для хранения результата
-	long _timeout = millis() + 10000;             // Переменная для отслеживания таймаута (10 секунд)
-	while (!SIM800.available() && millis() < _timeout) {}; // Ждем ответа 10 секунд, если пришел ответ или наступил таймаут, то...
-	if (SIM800.available()) {                     // Если есть, что считывать...
-		_resp = SIM800.readString();                // ... считываем и запоминаем
+String waitResponse() {                         // Function wait request and give resul 
+	String _resp = "";                            // Variable for result
+	long _timeout = millis() + 10000;             // Timeout (10 sec) variable
+	while (!SIM800.available() && millis() < _timeout) {}; // Wait for 10 sec
+	if (SIM800.available()) {
+		_resp = SIM800.readString();
 	}
-	else {                                        // Если пришел таймаут, то...
-		Serial.println("Timeout...");               // ... оповещаем об этом и...
+	else {                                        // If timeout...
+		Serial.println("Timeout...");             // ... alert about it...
 	}
-	return _resp;                                 // ... возвращаем результат. Пусто, если проблема
-}
+	return _resp;
+}                                                 // ... return result. Empty, if problem....
 
 void sendSMS(String innerPhone, String message) {
-	sendATCommand("AT+CMGS=\"" + innerPhone + "\"", true);             // Переходим в режим ввода текстового сообщения
-	sendATCommand(message + "\r\n" + (String)((char)26), true);   // После текста отправляем перенос строки и Ctrl+Z
+	sendATCommand("AT+CMGS=\"" + innerPhone + "\"", true);             
+	sendATCommand(message + "\r\n" + (String)((char)26), true);   
 }
 
 /*void parseSMS(String msg) {
@@ -195,25 +195,25 @@ Serial.println("Message: " + msgbody);
 
 
 void loop() {
-	if (SIM800.available()) {                   // Если модем, что-то отправил...
-		_response = waitResponse();                 // Получаем ответ от модема для анализа
-		_response.trim();                           // Убираем лишние пробелы в начале и конце
-		Serial.println(_response);                  // Если нужно выводим в монитор порта
+	if (SIM800.available()) {                   // If modem send something...
+		_response = waitResponse();                 // Recive ansver from modem for analise
+		_response.trim();                           // Cut withe spaces in start and of line
+		Serial.println(_response);                  // Print in UART PC
 
 
-		if (_response.startsWith("RING")) {         // Есть входящий вызов
-			int phoneindex = _response.indexOf("+CLIP: \"");// Есть ли информация об определении номера, если да, то phoneindex>-1
+		if (_response.startsWith("RING")) {         
+			int phoneindex = _response.indexOf("+CLIP: \"");// If phone number detected, then phoneindex>-1
 
-			if (phoneindex >= 0) {                    // Если информация была найдена
-				phoneindex += 8;                        // Парсим строку и ...
-				innerPhone = _response.substring(phoneindex, _response.indexOf("\"", phoneindex)); // ...получаем номер
-				Serial.println("Number: " + innerPhone); // Выводим номер в монитор порта
+			if (phoneindex >= 0) {                    // If information was find
+				phoneindex += 8;                        // Parse line...
+				innerPhone = _response.substring(phoneindex, _response.indexOf("\"", phoneindex)); // ...take number
+				Serial.println("Number: " + innerPhone); // Print number to UART PC
 			}
 
 			if (innerPhone.length() >= 7 && whiteListPhones.indexOf(innerPhone) >= 0) {
 
 
-				sendATCommand("ATA", true);         // Поднимаем трубку
+				sendATCommand("ATA", true);         // To answer a call
 
 			}
 			else if (innerPhone.length() >= 7 && whiteListPhones != innerPhone)
@@ -225,21 +225,12 @@ void loop() {
 		}
 
 		if (_response.startsWith("+DTMF:")) {
-			//Serial.println(">" + _response);
-			String symbol = _response.substring(7, 8); //Выдергиваем символ с 7 позиции длиной 1 (по 8)
+			
+			String symbol = _response.substring(7, 8); //Take symbol from 7 position
 			Serial.println("Key" + symbol);
-
-			/*switch (symbol)
-			{
-			case "1":
-
-			break;
-			default:
-			break;
-			}*/
-
+						
 			if (symbol == "1") {
-				//digitalWrite(pins, HIGH);
+				
 				t = bme.readTemperature();
 				delay(100);
 				h = bme.readHumidity();
@@ -284,7 +275,7 @@ void loop() {
 	weight = scale.get_units(10);
 	delay(100);
 
-	if (Serial.available()) {                       // Ожидаем команды по Serial...
-		SIM800.write(Serial.read());                // ...и отправляем полученную команду модему
+	if (Serial.available()) {                       // Wait for command from UART PC...
+		SIM800.write(Serial.read());                // ...and trancive this command to modem
 	}
 }
