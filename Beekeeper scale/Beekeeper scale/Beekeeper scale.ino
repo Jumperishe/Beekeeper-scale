@@ -15,7 +15,7 @@ const int SCALE_SCK_PIN = D5;
 #define ssid      "Edimax_2g"						// WiFi SSID
 #define password  "magnaTpwd0713key"				// WiFi password
 
-String innerPhone = "";                             // Переменная для хранения определенного номера
+String innerPhone = "";                             // variable for inner phone
 bool status;
 float t = 0;
 float p = 0;
@@ -26,7 +26,7 @@ float callFactor = 23512.f;
 SoftwareSerial SIM800(D7, D6);						// RX, TX
 String sendATCommand(String cmd, bool waiting);
 String waitResponse();
-String whiteListPhones = "+380962372023, +380679832130, +380677748522";			// Белый список телефонов
+String whiteListPhones = "+380962372023, +380679832130, +380677748522";			// Withe lists of phone numbers
 void sendSMS(String phone, String message);
 void parseSMS(String msg);
 
@@ -85,23 +85,23 @@ String getPage() {
 }
 
 int pins = D8;
-String _response = "";                             // Переменная для хранения ответа модуля
+String _response = "";                             // Response from module SIM800L
 
 void setup() {
 
-	Serial.begin(9600);                            // Скорость обмена данными с компьютером
-	SIM800.begin(9600);                            // Скорость обмена данными с модемом
+	Serial.begin(9600);                            //UART speed with PC
+	SIM800.begin(9600);                            //UART speed with SIM800L
 	Serial.println("Start!");
 	pinMode(pins, OUTPUT);
 	digitalWrite(pins, LOW);
 
-	sendATCommand("AT", true);                     // Отправили AT для настройки скорости обмена данными
+	sendATCommand("AT", true);                     // Send AT for auto setup module
 
-												   // Команды настройки модема при каждом запуске
-	_response = sendATCommand("AT+CLIP=1", true);  // Включаем АОН
-	_response = sendATCommand("AT+DDET=1", true);  // Включаем DTMF
+												   // Setup commands for every startup modem 
+	_response = sendATCommand("AT+CLIP=1", true);  // On automatic number detect
+	_response = sendATCommand("AT+DDET=1", true);  // On DTMF
 
-												   /********************************************************Wi-Fi and Server inicialisation****************/
+	/********************************************************Wi-Fi and Server inicialisation****************/
 	WiFi.begin(ssid, password);
 
 	while (WiFi.status() != WL_CONNECTED) {
@@ -129,7 +129,7 @@ void setup() {
 
 	scale.read();
 	scale.set_gain(128);
-	scale.set_scale(callFactor); // <- set here calibration factor!!!
+	scale.set_scale(callFactor); 
 	scale.tare();
 
 }
@@ -141,18 +141,18 @@ void handleRoot() {
 }
 
 String sendATCommand(String cmd, bool waiting) {
-	String _resp = "";                            // Переменная для хранения результата
-	Serial.println(cmd);                          // Дублируем команду в монитор порта
-	SIM800.println(cmd);                          // Отправляем команду модулю
-	if (waiting) {                                // Если необходимо дождаться ответа...
-		_resp = waitResponse();                     // ... ждем, когда будет передан ответ
-													// Если Echo Mode выключен (ATE0), то эти 3 строки можно закомментировать
-		if (_resp.startsWith(cmd)) {                // Убираем из ответа дублирующуюся команду
+	String _resp = "";                            // Result varrible
+	Serial.println(cmd);                          // Double command in PC UART
+	SIM800.println(cmd);                          // Send command to modem
+	if (waiting) {                                // If response need...
+		_resp = waitResponse();                     // ... wait, while response will be resived
+													
+		if (_resp.startsWith(cmd)) {                // Cut from responce double commands
 			_resp = _resp.substring(_resp.indexOf("\r", cmd.length()) + 2);
 		}
-		Serial.println(_resp);                      // Дублируем ответ в монитор порта
+		Serial.println(_resp);                      // Dublicate to PC UART
 	}
-	return _resp;                                 // Возвращаем результат. Пусто, если проблема
+	return _resp;                                 // Return result. Empty, if problem...
 }
 
 String waitResponse() {                         // Функция ожидания ответа и возврата полученного результата
