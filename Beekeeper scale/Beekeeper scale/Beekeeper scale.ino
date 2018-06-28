@@ -3,17 +3,14 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <SoftwareSerial.h>							
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#include <ESP8266WebServer.h>
 #include <HX711.h>
 
 
-const int SCALE_DOUT_PIN = D0;
-const int SCALE_SCK_PIN = D5;
+const int SCALE_DOUT_PIN = A2;
+const int SCALE_SCK_PIN = A3;
 
-#define ssid      "Edimax_2g"						// WiFi SSID
-#define password  "magnaTpwd0713key"				// WiFi password
+//#define ssid      "JumperOK"						// WiFi SSID
+//#define password  "specialized200926"				// WiFi password
 
 String innerPhone = "";                             // variable for inner phone
 bool status;
@@ -23,7 +20,7 @@ float h = 0;
 float weight = 0;
 float callFactor = 23512.f;
 
-SoftwareSerial SIM800(D7, D6);						// RX, TX
+SoftwareSerial SIM800(5, 6);						// RX, TX
 String sendATCommand(String cmd, bool waiting);
 String waitResponse();
 String whiteListPhones = "+380962372023, +380679832130, +380677748522";			// Withe lists of phone numbers
@@ -31,9 +28,9 @@ void sendSMS(String phone, String message);
 //void parseSMS(String msg);
 
 Adafruit_BME280 bme;
-ESP8266WebServer server(80);
+//ESP8266WebServer server(80);
 HX711 scale(SCALE_DOUT_PIN, SCALE_SCK_PIN);
-String getPage() {
+/*String getPage() {
 	String page = "<html lang='en'><head><meta http-equiv='refresh' content='120' name='viewport' content='width=device-width, initial-scale=1'/>";
 	page += "<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'><script src='https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js'></script><script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js'></script>";
 	page += "<title>ESP8266 </title></head><body>";
@@ -83,25 +80,23 @@ String getPage() {
 	page += "</body></html>";
 	return page;
 }
+*/
 
-int pins = D8;
 String _response = "";                             // Response from module SIM800L
 
 void setup() {
-
+	//wdt_disable();
 	Serial.begin(9600);                            //UART speed with PC
 	SIM800.begin(9600);                            //UART speed with SIM800L
 	Serial.println("Start!");
-	pinMode(pins, OUTPUT);
-	digitalWrite(pins, LOW);
-
+	
 	sendATCommand("AT", true);                     // Send AT for auto setup module
 
 												   // Setup commands for every startup modem 
 	_response = sendATCommand("AT+CLIP=1", true);  // On automatic number detect
 	_response = sendATCommand("AT+DDET=1", true);  // On DTMF
 
-	/********************************************************Wi-Fi and Server inicialisation****************/
+	/********************************************************Wi-Fi and Server inicialisation****************
 	WiFi.begin(ssid, password);
 
 	while (WiFi.status() != WL_CONNECTED) {
@@ -116,7 +111,7 @@ void setup() {
 
 	server.begin();
 	Serial.println("HTTP server started");
-	/*****************************************************************************************************/
+	*****************************************************************************************************/
 
 	status = bme.begin();
 	if (!status) {
@@ -127,18 +122,21 @@ void setup() {
 		Serial.println("BMP280 OK");
 	}
 
+	Serial.println("Scale is ready");
+
 	scale.read();
 	scale.set_gain(128);
 	scale.set_scale(callFactor); 
 	scale.tare();
+	
 
 }
 
-void handleRoot() {
+/*void handleRoot() {
 
 	server.send(200, "text/html", getPage());
 
-}
+}*/
 
 String sendATCommand(String cmd, bool waiting) {
 	String _resp = "";                            // Result varrible
@@ -166,6 +164,7 @@ String waitResponse() {                         // Function wait request and giv
 		Serial.println("Timeout...");             // ... alert about it...
 	}
 	return _resp;
+	yield();
 }                                                 // ... return result. Empty, if problem....
 
 void sendSMS(String innerPhone, String message) {
@@ -195,9 +194,10 @@ Serial.println("Message: " + msgbody);
 
 
 void loop() {
+	
 	if (SIM800.available()) {                   // If modem send something...
 		_response = waitResponse();                 // Recive ansver from modem for analise
-		_response.trim();                           // Cut withe spaces in start and of line
+		_response.trim();                           // Cut withe spaces in start and of string
 		Serial.println(_response);                  // Print in UART PC
 
 
@@ -205,7 +205,7 @@ void loop() {
 			int phoneindex = _response.indexOf("+CLIP: \"");// If phone number detected, then phoneindex>-1
 
 			if (phoneindex >= 0) {                    // If information was find
-				phoneindex += 8;                        // Parse line...
+				phoneindex += 8;                        // Parse string...
 				innerPhone = _response.substring(phoneindex, _response.indexOf("\"", phoneindex)); // ...take number
 				Serial.println("Number: " + innerPhone); // Print number to UART PC
 			}
@@ -232,27 +232,30 @@ void loop() {
 			if (symbol == "1") {
 				
 				t = bme.readTemperature();
-				delay(100);
+				delay(10);
 				h = bme.readHumidity();
-				delay(100);
+				delay(10);
 				p = bme.readPressure() / 133.32239F;
-				delay(100);
-
+				delay(10);
+								
 				String temp = String(t);
 
 				Serial.println(t);
 				Serial.println(h);
 				Serial.println(p);
-				sendSMS(innerPhone, "Temperature: " + temp + "C \r\n" + "Humid: " + String(h) + "% \r\n" + "Pressure: " + String(p) + "mmHg");
+				Serial.println(weight);
+				sendSMS(innerPhone, "Temperature: " + temp + "C \r\n" + "Humid: " + String(h) + "% \r\n" + "Pressure: " + String(p) + "mmHg \r\n" + "Weight: " + String(weight) + "Kg");
 			}
 
 			if (symbol == "0") {
 				scale.tare();
+				sendSMS(innerPhone, "Scale is tared");
 			}
 
 			if (symbol == "2") {
 				weight = scale.get_units(10);
-				Serial.println(String(weight, 2));
+				//Serial.println(String(weight, 2));
+				sendSMS(innerPhone, "Weight: " + String(weight) + "Kg");
 			}
 
 		}
@@ -268,7 +271,7 @@ void loop() {
 		}*/
 
 	}
-	server.handleClient();
+	//server.handleClient();
 	t = bme.readTemperature();
 	h = bme.readHumidity();
 	p = bme.readPressure() / 133.32239F;
